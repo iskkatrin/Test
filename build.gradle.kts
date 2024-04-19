@@ -1,4 +1,3 @@
-
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val ktor_version: String by project
@@ -58,12 +57,15 @@ dependencies {
     implementation("com.squareup.retrofit2:adapter-rxjava2:2.3.0")
     implementation("com.squareup.okhttp3:logging-interceptor:3.10.0")
 
+
     testImplementation("io.ktor:ktor-server-tests:$ktor_version")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
     testImplementation("org.assertj:assertj-core:3.19.0")
     testImplementation("io.rest-assured:rest-assured:4.3.3")
     testImplementation("org.hamcrest:hamcrest:2.2")
+
+
 }
 
 tasks.withType<Jar> {
