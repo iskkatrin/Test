@@ -18,5 +18,6 @@ public class AuthorController {
     @GetMapping ("/budget/year/{year}/stats")
     public List<BudgetStatsDTO> getBudgetStatsByYearWithAuthorFilter(@PathVariable int year, @RequestParam(required = false) String authorNameFilter) {
         return authorService.getBudgetStatsByYear(year, authorNameFilter);
+
     }
 }
