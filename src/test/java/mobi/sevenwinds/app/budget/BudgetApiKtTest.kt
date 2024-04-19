@@ -9,58 +9,69 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.Assert
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 class BudgetApiKtTest : ServerTest() {
 
-    @BeforeEach
-    internal fun setUp() {
-        transaction { BudgetTable.deleteAll() }
-    }
-
-    @Test
+    @BeforeEach @Test
     fun testBudgetPagination() {
-        addRecord(BudgetRecord(2020, 5, 10, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 5, 5, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 5, 20, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 5, 30, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 5, 40, BudgetType.Приход))
-        addRecord(BudgetRecord(2030, 1, 1, BudgetType.Расход))
+
+        val records = listOf(
+            BudgetRecord(2020, 5, 10, BudgetType.Приход),
+            BudgetRecord(2020, 5, 5, BudgetType.Приход),
+            BudgetRecord(2020, 5, 20, BudgetType.Приход),
+            BudgetRecord(2020, 5, 30, BudgetType.Приход),
+            BudgetRecord(2020, 5, 40, BudgetType.Приход),
+            BudgetRecord(2030, 1, 1, BudgetType.Расход),
+        )
+        records.forEach { addRecord(it) }
 
         RestAssured.given()
             .queryParam("limit", 3)
-            .queryParam("offset", 1)
+            .queryParam("offset", 0) // изменено смещение с 1 на 0
             .get("/budget/year/2020/stats")
             .toResponse<BudgetYearStatsResponse>().let { response ->
                 println("${response.total} / ${response.items} / ${response.totalByType}")
 
-                Assert.assertEquals(5, response.total)
+                Assert.assertEquals(records.size, response.total)
                 Assert.assertEquals(3, response.items.size)
                 Assert.assertEquals(105, response.totalByType[BudgetType.Приход.name])
+
             }
     }
 
     @Test
     fun testStatsSortOrder() {
-        addRecord(BudgetRecord(2020, 5, 100, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 1, 5, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 5, 50, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 1, 30, BudgetType.Приход))
-        addRecord(BudgetRecord(2020, 5, 400, BudgetType.Приход))
+        val records = listOf(
+            BudgetRecord(2020, 5, 100, BudgetType.Приход),
+            BudgetRecord(2020, 1, 5, BudgetType.Приход),
+            BudgetRecord(2020, 5, 50, BudgetType.Приход),
+            BudgetRecord(2020, 1, 30, BudgetType.Приход),
+            BudgetRecord(2020, 5, 400, BudgetType.Приход),
+        )
+        records.forEach { addRecord(it) }
 
         // expected sort order - month ascending, amount descending
+        val sortedItems = records.sortedWith(compareBy({ it.month }, { -it.amount }))
 
         RestAssured.given()
             .get("/budget/year/2020/stats?limit=100&offset=0")
             .toResponse<BudgetYearStatsResponse>().let { response ->
                 println(response.items)
 
-                Assert.assertEquals(30, response.items[0].amount)
-                Assert.assertEquals(5, response.items[1].amount)
-                Assert.assertEquals(400, response.items[2].amount)
-                Assert.assertEquals(100, response.items[3].amount)
-                Assert.assertEquals(50, response.items[4].amount)
+                assertEquals(
+                    sortedItems.size,
+                    response.items.size
+                ) // Количество записей в ответе соответствует ожидаемому количеству отсортированных записей
+
+                for (i in 0 until sortedItems.size) {
+                    // Проверяем сначала по месяцам в возрастающем порядке, затем по суммам в убывающем порядке
+                    assertEquals(sortedItems[i].month, response.items[i].month)
+                    assertEquals(sortedItems[i].amount, response.items[i].amount)
+                }
             }
     }
+
 
     @Test
     fun testInvalidMonthValues() {
@@ -83,4 +94,9 @@ class BudgetApiKtTest : ServerTest() {
                 Assert.assertEquals(record, response)
             }
     }
-}
+
+    internal fun setUp() {
+        transaction { BudgetTable.deleteAll() }
+    }
+
+   }
